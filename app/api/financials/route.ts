@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { fetchDartReport, fetchDartReportAll, fetchShareholders, buildFinancialMetrics } from '@/utils/dart_api';
+import { fetchDartReport, fetchDartReportAll, fetchShareholders, fetchStockTotalQuantity, buildFinancialMetrics } from '@/utils/dart_api';
 import { getNaverStockInfo } from '@/utils/price_api';
-import { getVerifiedHistoricalPrice } from '@/utils/historical_price_api';
+import { getCrossVerifiedPrice } from '@/utils/historical_price_api';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -39,19 +39,28 @@ export async function GET(request: Request) {
     const naverStockInfo = await getNaverStockInfo(stockCode);
 
     const promises = targetPeriods.map(async (period) => {
-      // 1. 요약 재무제표
-      const rawReport = await fetchDartReport(corpCode, period.year, period.reprtCode, apiKey);
-      
-      // 2. 전체 재무제표 (현금/Net Cash 용)
-      const allReport = await fetchDartReportAll(corpCode, period.year, period.reprtCode, apiKey);
-        
-      // 3. 해당 시점의 지분구조
-      const hyslrList = await fetchShareholders(corpCode, period.year, period.reprtCode, apiKey);
+      // 1. DART 데이터 (요약/전체/지분/주식수)
+      const [rawReport, allReport, hyslrList, totalShares] = await Promise.all([
+        fetchDartReport(corpCode, period.year, period.reprtCode, apiKey),
+        fetchDartReportAll(corpCode, period.year, period.reprtCode, apiKey),
+        fetchShareholders(corpCode, period.year, period.reprtCode, apiKey),
+        fetchStockTotalQuantity(corpCode, period.year, period.reprtCode, apiKey)
+      ]);
 
-      // 4. [신규] Yahoo Finance를 통한 실제 기말 종가 검증
-      const verifiedPrice = await getVerifiedHistoricalPrice(stockCode, period.date);
+      // 2. 외부 시세 검증 (Yahoo + Naver 교차)
+      const priceResult = await getCrossVerifiedPrice(stockCode, period.date);
 
-      return buildFinancialMetrics(rawReport, allReport, hyslrList, period.label, period.year, period.reprtCode, naverStockInfo, verifiedPrice);
+      return buildFinancialMetrics(
+        rawReport, 
+        allReport, 
+        hyslrList, 
+        period.label, 
+        period.year, 
+        period.reprtCode, 
+        naverStockInfo, 
+        priceResult.verifiedPrice,
+        totalShares
+      );
     });
 
     const results = await Promise.all(promises);

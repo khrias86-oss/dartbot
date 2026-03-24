@@ -71,6 +71,24 @@ export async function fetchShareholders(corpCode: string, year: string, reprtCod
   } catch { return []; }
 }
 
+// 4. DART 주식의 총수 현황 (시가총액 정밀 계산용)
+export async function fetchStockTotalQuantity(corpCode: string, year: string, reprtCode: string, apiKey: string): Promise<number | null> {
+  try {
+    const res = await fetch(`https://opendart.fss.or.kr/api/stockTotqySttus.json?crtfc_key=${apiKey}&corp_code=${corpCode}&bsns_year=${year}&reprt_code=${reprtCode}`);
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json.status === '000' && Array.isArray(json.list)) {
+      // 보통주(istm_at_trmend_stock_totqy)의 기말 주식수를 찾습니다.
+      const item = json.list.find((i: any) => i.se === '보통주' || i.se === '합계');
+      if (item) {
+        const qty = parseInt(item.istm_at_trmend_stock_totqy.replace(/,/g, ''), 10);
+        return isNaN(qty) ? null : qty;
+      }
+    }
+    return null;
+  } catch { return null; }
+}
+
 function extractAmount(data: DartFinancialData[], keywords: string[]): number | null {
   for (const item of data) {
     if (!item.account_nm) continue;
@@ -92,7 +110,8 @@ export function buildFinancialMetrics(
   yearStr: string,
   reprtCode: string, 
   naverStockInfo: NaverStockInfo,
-  verifiedPrice: number | null = null // [추가] Yahoo Finance 등에서 검증된 실제 종가
+  verifiedPrice: number | null = null, // Yahoo Finance 기반 실제 종가
+  sharesOutstanding: number | null = null // [추가] DART 공시 기반 실제 주식 총수
 ): AdvancedFinancialMetrics {
   
   const 매출액 = extractAmount(rawData, ['매출액', '영업수익']) || 0;
@@ -117,13 +136,11 @@ export function buildFinancialMetrics(
       netCashStr = (c - d).toLocaleString('ko-KR');
   }
 
-  // [주가 검증 로직] 
-  // 1순위: Yahoo Finance에서 가져온 실제 검증 종가 (verifiedPrice)
-  // 2순위: Naver Finance EPS/PER 역산가 (hCP_naver)
+  // [주가 및 시가총액 정밀 산출 로직] 
   let hCP: number | null = verifiedPrice;
   let hMC: number | null = null;
 
-  // Naver 역산가 산출 (기존 로직 유지)
+  // Naver 역산가 (백업용 및 PER 환산용)
   let hCP_naver: number | null = null;
   let hMC_naver: number | null = null;
 
@@ -143,15 +160,14 @@ export function buildFinancialMetrics(
     }
   }
 
-  // 만약 Yahoo 검증가가 없으면 Naver 역산가를 사용
-  if (hCP === null) {
-    hCP = hCP_naver;
-  }
+  // 종가 결정: Yahoo 실종가(verifiedPrice) 우선, 없으면 Naver 역산가
+  if (hCP === null) hCP = hCP_naver;
   
-  // 시가총액 결정: 종가가 검증가인 경우, Naver의 시총을 비례 계산하여 보정하거나 Naver 시총 그대로 사용
-  // 여기서는 Naver 시총을 기준으로 하되, 종가가 바뀌었으므로 보정된 시총을 계산 시도
-  if (hMC_naver !== null && hCP_naver !== null && hCP !== null) {
-      // (검증종가 / 역산종가) * 역산시총 = 보정된 실제 시가총액
+  // 시가총액 결정 최우선순위: 실제 종가(verifiedPrice) * 실제 주식수(sharesOutstanding)
+  if (verifiedPrice !== null && sharesOutstanding !== null) {
+      hMC = verifiedPrice * sharesOutstanding;
+  } else if (hMC_naver !== null && hCP_naver !== null && hCP !== null) {
+      // 2순위: Naver 비례 보정 (sharesOutstanding이 없을 때)
       hMC = (hCP / hCP_naver) * hMC_naver;
   } else {
       hMC = hMC_naver;
