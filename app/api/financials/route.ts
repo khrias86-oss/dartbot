@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { fetchDartReport, fetchDartReportAll, fetchShareholders, buildFinancialMetrics } from '@/utils/dart_api';
 import { getNaverStockInfo } from '@/utils/price_api';
+import { getVerifiedHistoricalPrice } from '@/utils/historical_price_api';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -21,16 +22,16 @@ export async function GET(request: Request) {
   const currentYear = new Date().getFullYear();
   const baseYear = currentYear - 1;
 
-  const targetPeriods: { year: string; reprtCode: string; label: string }[] = [];
+  const targetPeriods: { year: string; reprtCode: string; label: string; date: string }[] = [];
   for (let y = baseYear; y > baseYear - yearsCount; y--) {
     const yStr = y.toString();
     if (unit === 'year') {
-      targetPeriods.push({ year: yStr, reprtCode: '11011', label: `${yStr}년 연간` });
+      targetPeriods.push({ year: yStr, reprtCode: '11011', label: `${yStr}년 연간`, date: `${yStr}-12-31` });
     } else if (unit === 'quarter') {
-      targetPeriods.push({ year: yStr, reprtCode: '11011', label: `${yStr}년 4Q` });
-      targetPeriods.push({ year: yStr, reprtCode: '11014', label: `${yStr}년 3Q` });
-      targetPeriods.push({ year: yStr, reprtCode: '11012', label: `${yStr}년 반기` });
-      targetPeriods.push({ year: yStr, reprtCode: '11013', label: `${yStr}년 1Q` });
+      targetPeriods.push({ year: yStr, reprtCode: '11011', label: `${yStr}년 4Q`, date: `${yStr}-12-31` });
+      targetPeriods.push({ year: yStr, reprtCode: '11014', label: `${yStr}년 3Q`, date: `${yStr}-09-30` });
+      targetPeriods.push({ year: yStr, reprtCode: '11012', label: `${yStr}년 반기`, date: `${yStr}-06-30` });
+      targetPeriods.push({ year: yStr, reprtCode: '11013', label: `${yStr}년 1Q`, date: `${yStr}-03-31` });
     }
   }
 
@@ -41,13 +42,16 @@ export async function GET(request: Request) {
       // 1. 요약 재무제표
       const rawReport = await fetchDartReport(corpCode, period.year, period.reprtCode, apiKey);
       
-      // 2. 전체 재무제표 (현금/Net Cash 용) - 분기별로도 활성화
+      // 2. 전체 재무제표 (현금/Net Cash 용)
       const allReport = await fetchDartReportAll(corpCode, period.year, period.reprtCode, apiKey);
         
-      // 3. 해당 시점의 지분구조 - 분기별로도 활성화
+      // 3. 해당 시점의 지분구조
       const hyslrList = await fetchShareholders(corpCode, period.year, period.reprtCode, apiKey);
 
-      return buildFinancialMetrics(rawReport, allReport, hyslrList, period.label, period.year, period.reprtCode, naverStockInfo);
+      // 4. [신규] Yahoo Finance를 통한 실제 기말 종가 검증
+      const verifiedPrice = await getVerifiedHistoricalPrice(stockCode, period.date);
+
+      return buildFinancialMetrics(rawReport, allReport, hyslrList, period.label, period.year, period.reprtCode, naverStockInfo, verifiedPrice);
     });
 
     const results = await Promise.all(promises);

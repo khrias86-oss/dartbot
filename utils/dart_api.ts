@@ -90,8 +90,9 @@ export function buildFinancialMetrics(
   shareholders: Shareholder[],  // 해당 연도/분기의 지분 구조
   periodLabel: string,
   yearStr: string,
-  reprtCode: string, // [추가] 분기 구분을 위해 필요
-  naverStockInfo: NaverStockInfo
+  reprtCode: string, 
+  naverStockInfo: NaverStockInfo,
+  verifiedPrice: number | null = null // [추가] Yahoo Finance 등에서 검증된 실제 종가
 ): AdvancedFinancialMetrics {
   
   const 매출액 = extractAmount(rawData, ['매출액', '영업수익']) || 0;
@@ -104,13 +105,11 @@ export function buildFinancialMetrics(
   const 부채비율 = 자본총계 !== 0 ? ((부채총계 / 자본총계) * 100).toFixed(2) + '%' : '-';
   const 영업이익률 = 매출액 !== 0 ? ((영업이익 / 매출액) * 100).toFixed(2) + '%' : '-';
 
-  // [수정핵심] 전체 재무제표에서 드디어 Net 현금/차입금을 뼛속까지 발라냅니다.
   const 현금성자산 = extractAmount(allData, ['현금및현금성자산', '현금 및 현금성 자산']);
   const 단기차입금 = extractAmount(allData, ['단기차입금', '유동성단기차입금', '유동성장기부채']);
 
   const fmt = (num: number) => num === 0 ? '-' : num.toLocaleString('ko-KR');
 
-  // Net Cash (현금 및 현금성자산 - 단기차입금)
   let netCashStr = '-';
   if (현금성자산 !== null || 단기차입금 !== null) {
       const c = 현금성자산 || 0;
@@ -118,25 +117,46 @@ export function buildFinancialMetrics(
       netCashStr = (c - d).toLocaleString('ko-KR');
   }
 
-  // [네이버 파트] 과거 데이터 복원 (연간/분기 구분)
-  let hCP: number | null = null;
+  // [주가 검증 로직] 
+  // 1순위: Yahoo Finance에서 가져온 실제 검증 종가 (verifiedPrice)
+  // 2순위: Naver Finance EPS/PER 역산가 (hCP_naver)
+  let hCP: number | null = verifiedPrice;
   let hMC: number | null = null;
 
+  // Naver 역산가 산출 (기존 로직 유지)
+  let hCP_naver: number | null = null;
+  let hMC_naver: number | null = null;
+
   if (reprtCode === '11011') {
-    // 연간 데이터
-    const annual = naverStockInfo.annualData[yearStr] || { historicalClosePrice: null, historicalMarketCap: null };
-    hCP = annual.historicalClosePrice;
-    hMC = annual.historicalMarketCap;
+    const annual = naverStockInfo.annualData[yearStr];
+    if (annual) {
+      hCP_naver = annual.historicalClosePrice;
+      hMC_naver = annual.historicalMarketCap;
+    }
   } else {
-    // 분기 데이터 매핑 (11013: 1Q, 11012: 2Q, 11014: 3Q)
     const monthMap: { [code: string]: string } = { '11013': '03', '11012': '06', '11014': '09' };
     const qKey = yearStr + (monthMap[reprtCode] || '03'); 
-    const quarterly = naverStockInfo.quarterlyData[qKey] || { historicalClosePrice: null, historicalMarketCap: null };
-    hCP = quarterly.historicalClosePrice;
-    hMC = quarterly.historicalMarketCap;
+    const quarterly = naverStockInfo.quarterlyData[qKey];
+    if (quarterly) {
+      hCP_naver = quarterly.historicalClosePrice;
+      hMC_naver = quarterly.historicalMarketCap;
+    }
+  }
+
+  // 만약 Yahoo 검증가가 없으면 Naver 역산가를 사용
+  if (hCP === null) {
+    hCP = hCP_naver;
   }
   
-  // 과거 PER = 시가총액 / 과거 단기순이익 환산
+  // 시가총액 결정: 종가가 검증가인 경우, Naver의 시총을 비례 계산하여 보정하거나 Naver 시총 그대로 사용
+  // 여기서는 Naver 시총을 기준으로 하되, 종가가 바뀌었으므로 보정된 시총을 계산 시도
+  if (hMC_naver !== null && hCP_naver !== null && hCP !== null) {
+      // (검증종가 / 역산종가) * 역산시총 = 보정된 실제 시가총액
+      hMC = (hCP / hCP_naver) * hMC_naver;
+  } else {
+      hMC = hMC_naver;
+  }
+  
   let histPer = '-';
   if (hMC !== null && 당기순이익 > 0) {
       histPer = (hMC / 당기순이익).toFixed(2) + '배';
@@ -144,7 +164,6 @@ export function buildFinancialMetrics(
       histPer = '적자(N/A)';
   }
 
-  // 지분구조 다중 추출 (상위 5인 이내)
   const holders: string[] = [];
   if (shareholders && shareholders.length > 0) {
       const topN = shareholders.slice(0, 5); 
@@ -152,7 +171,7 @@ export function buildFinancialMetrics(
           holders.push(`${s.nm} ${s.trmend_posesn_stock_qota_rt}%`);
       }
   } else {
-      holders.push('정보 없음'); // [요청사항] 지분 정보가 없으면 "정보 없음" 표시
+      holders.push('정보 없음');
   }
 
   return {
@@ -165,11 +184,9 @@ export function buildFinancialMetrics(
     자본총계: fmt(자본총계),
     부채비율,
     영업이익률,
-    // 복구된 정통 Net Cash
     현금및현금성자산: 현금성자산 !== null ? fmt(현금성자산) : '-',
     단기차입금: 단기차입금 !== null ? fmt(단기차입금) : '-',
     NetCash: netCashStr !== '-' ? netCashStr : '-',
-    // 과거 기말 종가 반영
     해당연도종가: hCP ? hCP.toLocaleString('ko-KR') + '원' : '-',
     해당연도시가총액: hMC ? Math.round(hMC / 100000000).toLocaleString('ko-KR') + '억' : '-',
     해당연도PER: histPer,
