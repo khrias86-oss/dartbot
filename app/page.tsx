@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import * as XLSX from "xlsx";
 import styles from "./page.module.css";
 import type { AdvancedFinancialMetrics, Shareholder } from "@/utils/dart_api";
 import type { CorpCodeInfo } from "@/utils/corp_api";
@@ -84,6 +85,38 @@ export default function Home() {
     }
   };
 
+  const handleExportExcel = () => {
+    if (!data || data.length === 0) return;
+
+    // 엑셀 데이터 구성 (가로축: 기간, 세로축: 지표)
+    const aoa = [
+      ["지표 항목 \\ 분석 기간", ...data.map(d => d.periodLabel)],
+      ["매출액", ...data.map(d => d.매출액)],
+      ["영업이익", ...data.map(d => d.영업이익)],
+      ["당기순이익", ...data.map(d => d.당기순이익)],
+      ["자산총계", ...data.map(d => d.자산총계)],
+      ["부채총계", ...data.map(d => d.부채총계)],
+      ["자본총계", ...data.map(d => d.자본총계)],
+      ["부채비율", ...data.map(d => d.부채비율)],
+      ["영업이익률", ...data.map(d => d.영업이익률)],
+      ["현금 및 현금성자산", ...data.map(d => d.현금및현금성자산)],
+      ["단기차입금", ...data.map(d => d.단기차입금)],
+      ["Net Cash", ...data.map(d => d.NetCash)],
+      ["주요 주주 지분", ...data.map(d => d.주요주주목록.join(' / '))],
+      ["현 시점 종가", ...data.map(d => d.해당연도종가)],
+      ["현 시점 시가총액", ...data.map(d => d.해당연도시가총액)],
+      ["현 시점 PER", ...data.map(d => d.해당연도PER)],
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "DART_Analysis");
+
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const fileName = `${selectedCorp?.corp_name}_재무분석_${dateStr}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+  };
+
   return (
     <div className={styles.page}>
       <main className={styles.main}>
@@ -148,7 +181,10 @@ export default function Home() {
         {/* 메인 재무 매트릭스 렌더링 */}
         {data && data.length > 0 && (
           <div className={styles.tableContainer}>
-            <h2 className={styles.tableTitle}>{selectedCorp?.corp_name} 통합 분석 데이터</h2>
+            <div className={styles.tableHeaderSection}>
+              <h2 className={styles.tableTitle}>{selectedCorp?.corp_name} 통합 분석 데이터</h2>
+              <button className={styles.exportBtn} onClick={handleExportExcel}>📊 엑셀 내보내기</button>
+            </div>
             
             <div className={styles.scrollWrapper}>
               <table className={styles.dataTable}>

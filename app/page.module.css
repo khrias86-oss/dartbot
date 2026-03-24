@@ -181,9 +181,35 @@
   margin-top: 40px;
 }
 
+.tableHeaderSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.exportBtn {
+  background: linear-gradient(135deg, #1d6f42 0%, #217346 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(33, 115, 70, 0.2);
+  font-size: 14px;
+}
+
+.exportBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(33, 115, 70, 0.3);
+  filter: brightness(1.1);
+}
+
 .tableTitle {
   font-size: 20px;
-  margin-bottom: 16px;
+  margin: 0;
   color: #1f2937;
   display: flex;
   align-items: center;
