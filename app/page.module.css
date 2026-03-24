@@ -1,0 +1,250 @@
+.page {
+  min-height: 100vh;
+  padding: 40px 20px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.main {
+  max-width: 1100px;
+  margin: 0 auto;
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+  background: linear-gradient(to right, #2563eb, #7c3aed);
+  background-clip: text;
+  color: transparent;
+}
+
+.desc {
+  color: #6b7280;
+  margin-bottom: 32px;
+  font-size: 16px;
+}
+
+.controlPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 24px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 32px;
+}
+
+.searchWrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.searchWrapper label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.searchInput {
+  padding: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.searchInput:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.suggestionsList {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-top: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 50;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+  padding: 0;
+  list-style: none;
+}
+
+.suggestionsList li {
+  padding: 12px 16px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.suggestionsList li:hover {
+  background-color: #f3f4f6;
+}
+
+.corpName {
+  font-weight: 600;
+}
+
+.stockCode {
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.successBadge {
+  position: absolute;
+  right: 12px;
+  top: 38px;
+  color: #10b981;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.optionsWrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.optionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.optionGroup label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.optionGroup select {
+  padding: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 15px;
+  background: white;
+  cursor: pointer;
+}
+
+.submitBtn {
+  flex: 1;
+  padding: 15px;
+  background-color: #111827;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.submitBtn:hover:not(:disabled) {
+  background-color: #374151;
+  transform: translateY(-1px);
+}
+
+.submitBtn:disabled {
+  background-color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.error {
+  padding: 16px;
+  background-color: #fef2f2;
+  color: #991b1b;
+  border-left: 4px solid #ef4444;
+  border-radius: 4px;
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+
+.tableContainer {
+  margin-top: 40px;
+}
+
+.tableTitle {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scrollWrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.dataTable th, .dataTable td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: right;
+}
+
+.dataTable th:first-child, .dataTable td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: white;
+  border-right: 2px solid #e5e7eb;
+  z-index: 10;
+}
+
+.dataTable thead th {
+  background-color: #f9fafb;
+  font-weight: 700;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.rowHeader td {
+  background-color: #f3f4f6;
+  font-size: 13px;
+  font-weight: 800;
+  color: #4b5563;
+  text-align: left;
+  letter-spacing: 0.05em;
+}
+
+.dataTable tbody tr:hover td:not(:first-child) {
+  background-color: #f9fafb;
+}
+
+.highlight {
+  font-weight: 700;
+  color: #2563eb !important;
+  background: #eff6ff;
+}
+
+.valFocus {
+  font-weight: 800;
+  color: #7c3aed !important;
+  background: #f5f3ff;
+}

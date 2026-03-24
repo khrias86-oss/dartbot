@@ -1,0 +1,50 @@
+{
+  "name": "dartbot",
+  "version": "0.1.0",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "build:exe": "node build-exe.js",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "build": {
+    "appId": "com.dartbot.app",
+    "productName": "DART Bot",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      ".next/standalone/**/*",
+      "main.js",
+      ".env.local"
+    ]
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "next": "16.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "xml2js": "^0.6.2",
+    "yahoo-finance2": "^2.11.3"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.8",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/xml2js": "^0.4.14",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "dotenv": "^17.3.1",
+    "electron": "^41.0.3",
+    "electron-builder": "^26.8.1",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.1",
+    "fs-extra": "^11.3.4",
+    "typescript": "^5",
+    "wait-on": "^9.0.4"
+  }
+}
